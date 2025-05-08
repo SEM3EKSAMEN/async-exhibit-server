@@ -54,68 +54,39 @@ exports.getEventById = async (req, res, next) => {
 
 exports.createEvent = async (req, res, next) => {
   try {
-    const {
-      title,
-      description,
-      // understøt både enkelt “date” og flere “dates”
-      date,
-      dates,
-      locationId,
-      curator,
-      artworkIds,
-    } = req.body;
+    const { title, description, date, locationId, curator, artworkIds } =
+      req.body;
 
-    const loc = locations.find((l) => l.id === locationId);
-    if (!loc) {
+    if (!allowedDates.includes(date)) {
+      return res.status(400).json({
+        message: "Invalid date – must be one of: " + allowedDates.join(", "),
+      });
+    }
+    const location = locations.find((l) => l.id === locationId);
+    if (!location)
       return res.status(404).json({ message: "Location not found" });
-    }
 
-    // samle alle datoer i en array
-    const dateList = Array.isArray(dates) ? dates : [date];
-    const created = [];
-
-    for (const d of dateList) {
-      // valider dato
-      if (!allowedDates.includes(d)) continue;
-      // tjek konflikt
-      const conflict = events.find(
-        (e) => e.date === d && e.locationId === locationId
-      );
-      if (conflict) continue;
-
-      // opret event
-      const ev = {
-        id: uuidv4(),
-        title,
-        description: description || "",
-        date: d,
-        locationId,
-        curator,
-        artworkIds: artworkIds || [],
-        totalTickets: loc.maxGuests,
-        bookedTickets: 0,
-      };
-      events.push(ev);
-      created.push(ev);
-    }
-
-    if (created.length === 0) {
+    const conflict = events.find(
+      (e) => e.date === date && e.locationId === locationId
+    );
+    if (conflict)
       return res
         .status(400)
-        .json({
-          message:
-            "Ingen nye events oprettet (måske ugyldige datoer eller konflikter)",
-        });
-    }
+        .json({ message: "Location already in use on this date" });
 
-    // retur enkelt objekt hvis kun én, ellers array
-    res
-      .status(201)
-      .json(
-        created.length === 1
-          ? created[0]
-          : { createdCount: created.length, events: created }
-      );
+    const newEvent = {
+      id: uuidv4(),
+      title,
+      description: description || "",
+      date,
+      locationId,
+      curator,
+      totalTickets: location.maxGuests,
+      bookedTickets: 0,
+      artworkIds: artworkIds || [],
+    };
+    events.push(newEvent);
+    res.status(201).json(newEvent);
   } catch (error) {
     next(error);
   }
