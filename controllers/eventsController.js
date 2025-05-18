@@ -1,4 +1,4 @@
-const placeholderImages = ["KKSgb22422", "KKSgb22423"];
+const placeholderImages = ["KKSgb22423"];
 
 function getRandomPlaceholder() {
   const index = Math.floor(Math.random() * placeholderImages.length);
